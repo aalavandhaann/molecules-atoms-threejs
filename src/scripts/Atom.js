@@ -388,7 +388,7 @@ export class Molecule extends Mesh{
         box2 = new Box3().setFromObject(molecule);
         boxDistance = box.getCenter(new Vector3()).clone().sub(box2.getCenter(new Vector3())).length();
 
-        if(boxDistance > (ATOMSIZE * 0.5)){
+        if(boxDistance > (ATOMSIZE * this.__atoms.length * 0.5)){
             return false;
         }
 
