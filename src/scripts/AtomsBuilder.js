@@ -1,7 +1,7 @@
 import Stats from 'stats.js';
-import {Scene, PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap, sRGBEncoding, AmbientLight, HemisphereLight, AxesHelper, BoxGeometry, BoxHelper, Mesh, MeshBasicMaterial, EventDispatcher} from "three"
+import {Scene, PerspectiveCamera, WebGLRenderer, PCFSoftShadowMap, sRGBEncoding, AmbientLight, HemisphereLight, AxesHelper, BoxGeometry, BoxHelper, Mesh, MeshBasicMaterial, EventDispatcher, Vector2, Raycaster, Vector3} from "three"
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
-import { Molecule, BOUNDS, EVENT_COLLISION, EVENT_DESTROYED } from "./Atom";
+import { Molecule, BOUNDS, NORMALSIZE, EVENT_COLLISION, EVENT_DESTROYED } from "./Atom";
 
 export class MoleculesCollider extends EventDispatcher {
     constructor(){
@@ -24,6 +24,13 @@ export class MoleculesCollider extends EventDispatcher {
 
     addCollidable(molecule){
         this.__collidables.push(molecule);
+    }
+
+    removeMolecule(molecule){
+        let index = this.__collidables.indexOf(molecule);
+        if(index > -1){
+            this.__collidables.splice(index, 1);
+        }
     }
 }
 
@@ -60,9 +67,11 @@ export class AtomsScene extends Scene {
         document.body.appendChild(this.__stats.dom);
 
         this.__initialize();
-        this.__addMoleculeToScene();
+        this.__addMoleculesToScene();
 
         this.__collidables.addEventListener(EVENT_COLLISION, this.__stopRender.bind(this));
+        window.addEventListener('click', this.__addMoleculeWithClick.bind(this));
+        window.addEventListener('contextmenu', this.__destroyMoleculeWithDoubleClick.bind(this));
     }
 
     __stopRender(evt){       
@@ -71,20 +80,70 @@ export class AtomsScene extends Scene {
         // this.__renderScene = false;
     }
 
-    __addMoleculeToScene(){
-        for (let i =0;i<50;i++){
-            let x = (Math.random() * (BOUNDS.x * 2) ) - BOUNDS.x;
-            let y = (Math.random() * (BOUNDS.y * 2) ) - BOUNDS.x;
-            let z = (Math.random() * (BOUNDS.z * 2) ) - BOUNDS.x;
+    __addNewMoleculeWithOneAtom(x, y, z){
+        let molecule = new Molecule();
+        molecule.addAtom();
+        molecule.position.set(x, y, z);
+        this.__molecules.push(molecule);
+        this.__collidables.addCollidable(molecule);
+        this.add(molecule);
+        molecule.addEventListener(EVENT_DESTROYED, this.__destroyMoleculeEvent);
+    }
+    __addMoleculeWithClick(evt){
+        let p = null;
+        let intersectResults = null;
+        let size = this.__getSize();
+        let raycaster = new Raycaster();
+        let mouse = new Vector3(0, 0, 0.5);
+        mouse.x = ((evt.clientX / size.x) * 2) - 1;
+        mouse.y = (-(evt.clientY / size.y) * 2) + 1;
+        raycaster.setFromCamera(mouse, this.__camera);
+        intersectResults = raycaster.intersectObject(this.__hitBox);
+        if(intersectResults.length){
+            p = intersectResults[0].point;
+            intersectResults = raycaster.intersectObjects(this.__molecules, true);
+            if(intersectResults.length){
+                let addCell=null, direction=null;
+                let atom= intersectResults[0].object, molecule=null;
+                direction = atom.getAlignedDirection(intersectResults[0].face.normal.clone());
+                molecule = atom.parent.parent;                
+                addCell = atom.cell.clone().add(intersectResults[0].face.normal.clone());
+                molecule.addAtom(addCell.y, addCell.x, addCell.z);//, direction);
+                console.log('NORMAL ::', intersectResults[0].face.normal, ', ACTUAL DIRECTION :: ', direction, );
+            }   
+            else{
+                this.__addNewMoleculeWithOneAtom(p.x, p.y, p.z);
+            }
+            
+        }        
+        evt.preventDefault();
+    }
 
-            let molecule = new Molecule();
-            molecule.addAtom();
-            molecule.position.set(x, y, z);
-            molecule.addEventListener(EVENT_DESTROYED, this.__destroyMoleculeEvent);
-            this.__molecules.push(molecule);
-            this.add(molecule);
-            this.__collidables.addCollidable(molecule);
+    __addMoleculesToScene(){
+        for (let i =0;i<1;i++){
+            let x = (Math.random() * (BOUNDS.x * 2) ) - BOUNDS.x;
+            let y = (Math.random() * (BOUNDS.y * 2) ) - BOUNDS.y;
+            let z = (Math.random() * (BOUNDS.z * 2) ) - BOUNDS.z;
+            this.__addNewMoleculeWithOneAtom(x, y, z);
         }
+    }
+
+    __destroyMoleculeWithDoubleClick(evt){
+        let size = this.__getSize();
+        let raycaster = new Raycaster();
+        let mouse = new Vector3(0, 0, 0.5);
+        let intersectResults = null;
+        mouse.x = ((evt.clientX / size.x) * 2) - 1;
+        mouse.y = (-(evt.clientY / size.y) * 2) + 1;
+        raycaster.setFromCamera(mouse, this.__camera);
+        intersectResults = raycaster.intersectObjects(this.__molecules, true);
+        if(intersectResults.length){
+            let atom = intersectResults[0].object;
+            let molecule = atom.parent.parent;
+            molecule.destroy();
+            console.log(molecule);
+        }
+        evt.preventDefault();
     }
 
     __destroyMolecule(evt){
@@ -92,6 +151,7 @@ export class AtomsScene extends Scene {
         evt.target.removeEventListener(EVENT_DESTROYED, this.__destroyMoleculeEvent);
         evt.target.clear();
         evt.target.removeFromParent();
+        this.__collidables.removeMolecule(evt.target);
         if(index > -1){
             this.__molecules.splice(index, 1);
         }
@@ -111,14 +171,16 @@ export class AtomsScene extends Scene {
         this.__controls.screenSpacePanning = true;
 
         const box = new BoxGeometry(BOUNDS.x*2, BOUNDS.y*2, BOUNDS.z*2, 1, 1, 1);
-        const boxMesh = new Mesh( box, new MeshBasicMaterial( 0xFF0000 ) );
+        const boxMesh = new Mesh( box, new MeshBasicMaterial( {color: 0xFF0000, visible: false} ) );
         this.__boundsBox = new BoxHelper(boxMesh, 0xFF0000);
+        this.__hitBox = boxMesh;
         
         this.__camera.position.set(0, 50, 50);
         this.__controls.update();
 
         this.add(this.__axes);
         this.add(this.__boundsBox);
+        this.add(this.__hitBox);
 
         this.__addLights();
         this.__domElement.appendChild(this.__renderer.domElement);
@@ -155,15 +217,21 @@ export class AtomsScene extends Scene {
         return renderer;
     }
 
-    __updateSize(){
+    __getSize(){
         let heightMargin = this.__domElement.offsetTop;
         let widthMargin = this.__domElement.offsetLeft;
         let elementWidth = window.innerWidth - widthMargin;
         let elementHeight = window.innerHeight - heightMargin;
 
-        this.__camera.aspect = elementWidth / elementHeight;
+        return new Vector2(elementWidth, elementHeight);
+    }
+
+    __updateSize(){
+        
+        let size = this.__getSize();
+        this.__camera.aspect = size.x / size.y;
         this.__camera.updateProjectionMatrix();
-        this.__renderer.setSize(elementWidth, elementHeight);
+        this.__renderer.setSize(size.x, size.y);
     }
 
     __render(time){

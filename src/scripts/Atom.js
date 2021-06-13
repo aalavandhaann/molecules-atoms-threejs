@@ -1,4 +1,4 @@
-import { AnimationMixer, Box3, Box3Helper, Mesh, Quaternion, Vector3 } from "three";
+import { AnimationMixer, Box3, Box3Helper, BoxGeometry, Euler, Mesh, MeshBasicMaterial, Quaternion, Vector3 } from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 
 export const ATOMSIZE = 4;
@@ -90,12 +90,14 @@ export class AnimatedAtom extends Mesh{
 export class Atom extends Mesh{
     constructor(row, column, depth){
         super();
+
         this.__atomSize = ATOMSIZE;
         this.__normalSize = NORMALSIZE;
         this.__row = (row) ? row: 0;
         this.__column = (column) ? column: 0;
         this.__depth = (depth) ? depth: 0;
         this.__cell = new Vector3(this.__column, this.__row, this.__depth);
+        this.__alignment = new Quaternion();
 
         this.__xA = new Vector3(this.__normalSize, 0, 0);
         this.__xB = new Vector3(-this.__normalSize, 0, 0);
@@ -110,9 +112,12 @@ export class Atom extends Mesh{
         this.__initialize();
     }
 
-    __initialize(){
+    __initialize(){        
         this.__gltfHolder = new AnimatedAtom();
         this.add(this.__gltfHolder);
+        this.geometry = new BoxGeometry(ATOMSIZE*1.1, ATOMSIZE*1.1, ATOMSIZE*1.1);
+        this.material = new MeshBasicMaterial({color: 0xFF0000, transparent: true, opacity: 0.5, visible: false});
+        this.geometry.computeBoundingBox();
         this.__updatePosition();
     }
 
@@ -146,6 +151,7 @@ export class Atom extends Mesh{
          */
         let quat = new Quaternion().setFromUnitVectors(direction, negateDirection);
         this.__gltfHolder.setRotationFromQuaternion(quat);
+        console.log('EULER ::: ', new Euler().setFromQuaternion(quat));
 
         this.__xA = this.__xA.applyQuaternion(quat);
         this.__xB = this.__xB.applyQuaternion(quat);
@@ -155,6 +161,11 @@ export class Atom extends Mesh{
 
         this.__zA = this.__zA.applyQuaternion(quat);
         this.__zB = this.__zB.applyQuaternion(quat);
+        this.__alignment = quat.clone();
+    }
+
+    getAlignedDirection(direction){
+        return direction.applyQuaternion(this.__alignment);
     }
 
     update(delta){
@@ -293,7 +304,7 @@ export class Molecule extends Mesh{
 
         this.__render = true;
         this.__speed = this.__newSpeed();
-        this.__rotationSpeed = this.__newSpeed(0.25, 0.75, 0.1);
+        this.__rotationSpeed = this.__newSpeed(0.25, 0.75, 0.00);
 
         this.__direction = new Vector3(
             (Math.round(Math.random())) ? 1 : -1, 
@@ -304,11 +315,10 @@ export class Molecule extends Mesh{
         this.__bounds = BOUNDS.clone();//new Vector3(10, 10, 10);
         this.__atoms = [];
         this.__atomsGrid = new Mesh();
-        
         this.add(this.__atomsGrid);
     }
 
-    __newSpeed(minV=0.25, maxV=0.75, factor=0.1){
+    __newSpeed(minV=0.25, maxV=0.75, factor=0.01){
         let ranSpeedX = (minV + (Math.random() * maxV))*factor;
         let ranSpeedY = (minV + (Math.random() * maxV))*factor;
         let ranSpeedZ = (minV + (Math.random() * maxV))*factor;
