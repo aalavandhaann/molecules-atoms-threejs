@@ -143,13 +143,8 @@ export class Atom extends Mesh{
         return pplusv;
     }
 
-    alignToDirection(direction){
-        let negateDirection = direction.clone().negate();
-        /**
-         * Singularities are good only in sci-fi novels or movies.
-         * In real life they are better to be avoided.
-         */
-        let quat = new Quaternion().setFromUnitVectors(direction, negateDirection);
+    __updateAlignment(){
+        let quat = this.__alignment;
         this.__gltfHolder.setRotationFromQuaternion(quat);
         console.log('EULER ::: ', new Euler().setFromQuaternion(quat));
 
@@ -161,7 +156,18 @@ export class Atom extends Mesh{
 
         this.__zA = this.__zA.applyQuaternion(quat);
         this.__zB = this.__zB.applyQuaternion(quat);
+    }
+
+    alignToDirection(direction){
+        let negateDirection = direction.clone().negate();
+        /**
+         * Singularities are good only in sci-fi novels or movies.
+         * In real life they are better to be avoided.
+         */
+        let quat = new Quaternion().setFromUnitVectors(direction, negateDirection);
+        quat = quat.multiply(this.__alignment);        
         this.__alignment = quat.clone();
+        this.__updateAlignment();
     }
 
     getAlignedDirection(direction){
@@ -174,6 +180,15 @@ export class Atom extends Mesh{
 
     pulse(delta){
         this.__gltfHolder.animate(delta);
+    }
+
+    get alignment(){
+        return this.__alignment;        
+    }
+
+    set alignment(quat){
+        this.__alignment = quat;
+        this.__updateAlignment();
     }
 
     get cell(){
@@ -303,8 +318,8 @@ export class Molecule extends Mesh{
         super();        
 
         this.__render = true;
-        this.__speed = this.__newSpeed();
-        this.__rotationSpeed = this.__newSpeed(0.25, 0.75, 0.00);
+        this.__speed = this.__newSpeed(0.25, 0.75, 0.1);
+        this.__rotationSpeed = this.__newSpeed(0.25, 0.75, 0.01);
 
         this.__direction = new Vector3(
             (Math.round(Math.random())) ? 1 : -1, 
@@ -329,7 +344,7 @@ export class Molecule extends Mesh{
         if((this.position.x > this.__bounds.x) || (this.position.x < -this.__bounds.x)
         && (this.position.y > this.__bounds.y) || (this.position.y < -this.__bounds.y)
         && (this.position.z > this.__bounds.z) || (this.position.z < -this.__bounds.z)){
-            this.__speed = this.__newSpeed();
+            this.__speed = this.__newSpeed(0.25, 0.75, 0.1);
         }
         this.__direction.x = (this.position.x > this.__bounds.x) ? -1: (this.position.x < -this.__bounds.x)? 1 : this.__direction.x;
         this.__direction.y = (this.position.y > this.__bounds.y) ? -1: (this.position.y < -this.__bounds.y)? 1 : this.__direction.y;

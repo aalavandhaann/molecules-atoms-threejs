@@ -105,10 +105,12 @@ export class AtomsScene extends Scene {
             if(intersectResults.length){
                 let addCell=null, direction=null;
                 let atom= intersectResults[0].object, molecule=null;
+                let newAtom=null;
                 direction = atom.getAlignedDirection(intersectResults[0].face.normal.clone());
                 molecule = atom.parent.parent;                
                 addCell = atom.cell.clone().add(intersectResults[0].face.normal.clone());
-                molecule.addAtom(addCell.y, addCell.x, addCell.z);//, direction);
+                newAtom = molecule.addAtom(addCell.y, addCell.x, addCell.z, direction);
+                newAtom.alignment = newAtom.alignment.clone().multiply(atom.alignment);
                 console.log('NORMAL ::', intersectResults[0].face.normal, ', ACTUAL DIRECTION :: ', direction, );
             }   
             else{
