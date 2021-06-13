@@ -1,0 +1,19 @@
+{
+  "name": "vention-atoms",
+  "version": "1.0.0",
+  "description": "A simple atom builder",
+  "main": "src/index.js",
+  "scripts": {
+    "build-run-atoms": "parcel src/index.html -d app/ --no-source-maps"
+  },
+  "author": "#0K Srinivasan",
+  "license": "ISC",
+  "devDependencies": {
+    "parcel-bundler": "^1.12.3"
+  },
+  "dependencies": {
+    "scripts": "^0.1.0",
+    "stats.js": "^0.17.0",
+    "three": "^0.129.0"
+  }
+}
