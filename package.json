@@ -4,7 +4,8 @@
   "description": "A simple atom builder",
   "main": "src/index.js",
   "scripts": {
-    "build-run-atoms": "parcel src/index.html -d app/ --no-source-maps"
+    "build-run-atoms-local": "parcel src/index.html -d app/ --no-source-maps",
+    "build-run-atoms-git": "parcel build src/index.html -d demo/ --public-url https://aalavandhaann.github.io/molecules-atoms-threejs/demo/  --no-source-maps --no-minify"
   },
   "author": "#0K Srinivasan",
   "license": "ISC",
