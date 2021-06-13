@@ -375,9 +375,11 @@ export class Molecule extends Mesh{
          * intersecting with each other is an algorithm by itself. 
          * So keeping the situation simplistic
          */
-        if(molecule.atoms.length > 1 && this.atoms.length > 1){
-            return false;
-        }
+        // if(molecule.atoms.length > 1 && this.atoms.length > 1){
+        //     return false;
+        // }
+
+
         /**
          * Need to use boxes because a molecule could be of any size
          */
@@ -404,8 +406,9 @@ export class Molecule extends Mesh{
         atomResult = collisionResults[minIndex];
         addCell = atomResult.atomA.cell.clone().add(atomResult.direction);
         newAtom = this.addAtom(addCell.y, addCell.x, addCell.z, atomResult.direction);
-        molecule.destroy();
         newAtom.alignment = newAtom.alignment.clone().multiply(atomResult.atomA.alignment);
+        // molecule.destroy();
+        molecule.removeAtom(otherFirstAtom);
         return true;
     }
 
@@ -418,6 +421,20 @@ export class Molecule extends Mesh{
             }
         }
         return null;
+    }
+
+    removeAtom(atom){
+        let index;
+        if(this.__atoms.indexOf(atom) < 0){
+            return atom;
+        }
+        index = this.__atoms.indexOf(atom);
+        this.__atomsGrid.remove(atom);
+        this.__atoms.splice(index,1);
+        if(!this.__atoms.length){
+            this.destroy();
+        }
+        return atom;
     }
 
     addAtom(row, column, depth, alignDirection){        
