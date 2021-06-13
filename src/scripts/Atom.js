@@ -355,7 +355,7 @@ export class Molecule extends Mesh{
         let box, box2, boxDistance;
         let i;      
         let otherFirstAtom;
-        let distances=[], collisionResults=[], minIndex, atomResult, addCell;
+        let distances=[], collisionResults=[], minIndex, atomResult, addCell, newAtom=null;
         /**
          * How can a molecule attract to itself?
          */
@@ -403,9 +403,9 @@ export class Molecule extends Mesh{
         minIndex = distances.indexOf(Math.min(...distances));
         atomResult = collisionResults[minIndex];
         addCell = atomResult.atomA.cell.clone().add(atomResult.direction);
-
+        newAtom = this.addAtom(addCell.y, addCell.x, addCell.z, atomResult.direction);
         molecule.destroy();
-        this.addAtom(addCell.y, addCell.x, addCell.z, atomResult.direction);
+        newAtom.alignment = newAtom.alignment.clone().multiply(atomResult.atomA.alignment);
         return true;
     }
 
