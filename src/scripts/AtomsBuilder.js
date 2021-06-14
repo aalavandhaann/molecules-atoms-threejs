@@ -39,6 +39,8 @@ export class AtomsScene extends Scene {
         super();
         this.__domID = (elementID) ? elementID : "atoms-scene";
         this.__domElement = document.getElementById(this.__domID);
+        this.__domInfoId = null;
+        this.__domInfoElement = null;
 
         if(!this.__domElement){
             this.__domElement = document.createElement("DIV");
@@ -72,6 +74,32 @@ export class AtomsScene extends Scene {
         this.__collidables.addEventListener(EVENT_COLLISION, this.__stopRender.bind(this));
         window.addEventListener('click', this.__addMoleculeWithClick.bind(this));
         window.addEventListener('contextmenu', this.__destroyMoleculeWithDoubleClick.bind(this));
+        window.addEventListener('mousemove', this.__infoWindow.bind(this));
+    }
+
+    __infoWindow(evt){
+        console.log('show info');
+        if(!this.__domInfoElement){
+            return;
+        }
+        let atom = null, molecule = null;
+        let intersectResults = null;
+        let size = this.__getSize();
+        let raycaster = new Raycaster();
+        let mouse = new Vector3(0, 0, 0.5);
+        let message = null;
+        let valence = 'N/A';
+        mouse.x = ((evt.clientX / size.x) * 2) - 1;
+        mouse.y = (-(evt.clientY / size.y) * 2) + 1;
+        raycaster.setFromCamera(mouse, this.__camera);
+        intersectResults = raycaster.intersectObjects(this.__molecules, true);
+        if(intersectResults.length){
+            atom= intersectResults[0].object;
+            molecule = atom.parent.parent;
+            valence = molecule.valence;            
+        }
+        message = `Valence: ${valence}`;
+        this.__domInfoElement.innerHTML = message;
     }
 
     __stopRender(evt){       
@@ -255,5 +283,14 @@ export class AtomsScene extends Scene {
             this.__renderer.render(this, this.__camera);        
         }
         this.__stats.end();
+    }
+
+    get domInfoId(){
+        return this.__domInfoId;
+    }
+
+    set domInfoId(id){
+        this.__domInfoId = id;
+        this.__domInfoElement = document.getElementById(id);
     }
 }

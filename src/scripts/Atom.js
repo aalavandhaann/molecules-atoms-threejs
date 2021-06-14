@@ -529,4 +529,8 @@ export class Molecule extends Mesh{
     set render(flag){
         this.__render = flag;
     }
+
+    get valence(){
+        return this.__atoms.length;
+    }
 }
