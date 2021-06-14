@@ -7,8 +7,29 @@ export const BOUNDS = new Vector3(20, 20, 20);
 export const EVENT_DESTROYED = 'DESTROYED_EVENT';
 export const EVENT_COLLISION = 'COLLISION_EVENT';
 
+export class MolecularGrid{
+    constructor(){
+        this.__gridkeys = {};
+    }
+
+    addAtomToCell(atom, row, column, depth){
+        let key = `${row}-${column}-${depth}`;
+        this.__gridkeys[key] = atom;
+    }
+
+    getCellObject(row, column, depth){
+        let key = `${row}-${column}-${depth}`;
+        return (this.__gridkeys[key]) ? this.__gridkeys[key] : null;
+    }
+
+    removeCellObject(row, column, depth){
+        let key = `${row}-${column}-${depth}`;
+        delete this.__gridkeys[key];
+    }
+}
+
 export class CollisionResult{
-    constructor(atomA, atomB){
+    constructor(atomA, atomB){        
         let xAD = atomA.wxSA.clone().sub(atomB.wxSA).length();
         let xBD = atomA.wxSA.clone().sub(atomB.wxSB).length();
         
@@ -18,8 +39,10 @@ export class CollisionResult{
         let zAD = atomA.wzSA.clone().sub(atomB.wzSA).length();
         let zBD = atomA.wzSB.clone().sub(atomB.wzSB).length();
 
+
         let distances = [xAD, xBD, yAD, yBD, zAD, zBD];
         let directions = [atomA.xA, atomA.xB, atomA.yA, atomA.yB, atomA.zA, atomA.zB];
+       
 
         let minIndex = distances.indexOf(Math.min(...distances));
 
@@ -320,6 +343,7 @@ export class Molecule extends Mesh{
         this.__render = true;
         this.__speed = this.__newSpeed(0.25, 0.75, 0.1);
         this.__rotationSpeed = this.__newSpeed(0.25, 0.75, 0.01);
+        this.__cells = new MolecularGrid();
 
         this.__direction = new Vector3(
             (Math.round(Math.random())) ? 1 : -1, 
@@ -406,9 +430,11 @@ export class Molecule extends Mesh{
         atomResult = collisionResults[minIndex];
         addCell = atomResult.atomA.cell.clone().add(atomResult.direction);
         newAtom = this.addAtom(addCell.y, addCell.x, addCell.z, atomResult.direction);
-        newAtom.alignment = newAtom.alignment.clone().multiply(atomResult.atomA.alignment);
-        // molecule.destroy();
-        molecule.removeAtom(otherFirstAtom);
+        if(newAtom){
+            newAtom.alignment = newAtom.alignment.clone().multiply(atomResult.atomA.alignment);
+            // molecule.destroy();
+            molecule.removeAtom(otherFirstAtom);
+        }        
         return true;
     }
 
@@ -429,6 +455,7 @@ export class Molecule extends Mesh{
             return atom;
         }
         index = this.__atoms.indexOf(atom);
+        this.__cells.removeCellObject(atom.cell.y, atom.cell.x, atom.cell.z);
         this.__atomsGrid.remove(atom);
         this.__atoms.splice(index,1);
         if(!this.__atoms.length){
@@ -437,13 +464,24 @@ export class Molecule extends Mesh{
         return atom;
     }
 
-    addAtom(row, column, depth, alignDirection){        
-        let atom = new Atom(row, column, depth);
+    addAtom(row, column, depth, alignDirection){
+
+        let atom;
+        /**
+         * The cell is not free. So cannot add.
+         */
+        if(this.__cells.getCellObject(row, column, depth)){
+            return null;
+        }
+        atom  = new Atom(row, column, depth);
+
+        this.__cells.addAtomToCell(atom, row, column, depth);
         this.__atomsGrid.add(atom); 
         this.__atoms.push(atom);
         if(alignDirection){
             atom.alignToDirection(alignDirection);
         }
+
         return atom;
     }
 

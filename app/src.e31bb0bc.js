@@ -39983,7 +39983,7 @@ function toTrianglesDrawMode(geometry, drawMode) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.Molecule = exports.Atom = exports.AnimatedAtom = exports.CollisionResult = exports.EVENT_COLLISION = exports.EVENT_DESTROYED = exports.BOUNDS = exports.NORMALSIZE = exports.ATOMSIZE = void 0;
+exports.Molecule = exports.Atom = exports.AnimatedAtom = exports.CollisionResult = exports.MolecularGrid = exports.EVENT_COLLISION = exports.EVENT_DESTROYED = exports.BOUNDS = exports.NORMALSIZE = exports.ATOMSIZE = void 0;
 
 var _three = require("three");
 
@@ -40021,6 +40021,38 @@ var EVENT_DESTROYED = 'DESTROYED_EVENT';
 exports.EVENT_DESTROYED = EVENT_DESTROYED;
 var EVENT_COLLISION = 'COLLISION_EVENT';
 exports.EVENT_COLLISION = EVENT_COLLISION;
+
+var MolecularGrid = /*#__PURE__*/function () {
+  function MolecularGrid() {
+    _classCallCheck(this, MolecularGrid);
+
+    this.__gridkeys = {};
+  }
+
+  _createClass(MolecularGrid, [{
+    key: "addAtomToCell",
+    value: function addAtomToCell(atom, row, column, depth) {
+      var key = "".concat(row, "-").concat(column, "-").concat(depth);
+      this.__gridkeys[key] = atom;
+    }
+  }, {
+    key: "getCellObject",
+    value: function getCellObject(row, column, depth) {
+      var key = "".concat(row, "-").concat(column, "-").concat(depth);
+      return this.__gridkeys[key] ? this.__gridkeys[key] : null;
+    }
+  }, {
+    key: "removeCellObject",
+    value: function removeCellObject(row, column, depth) {
+      var key = "".concat(row, "-").concat(column, "-").concat(depth);
+      delete this.__gridkeys[key];
+    }
+  }]);
+
+  return MolecularGrid;
+}();
+
+exports.MolecularGrid = MolecularGrid;
 
 var CollisionResult = /*#__PURE__*/function () {
   function CollisionResult(atomA, atomB) {
@@ -40438,6 +40470,7 @@ var Molecule = /*#__PURE__*/function (_Mesh3) {
     _this4.__render = true;
     _this4.__speed = _this4.__newSpeed(0.25, 0.75, 0.1);
     _this4.__rotationSpeed = _this4.__newSpeed(0.25, 0.75, 0.01);
+    _this4.__cells = new MolecularGrid();
     _this4.__direction = new _three.Vector3(Math.round(Math.random()) ? 1 : -1, Math.round(Math.random()) ? 1 : -1, Math.round(Math.random()) ? 1 : -1);
     _this4.__bounds = BOUNDS.clone(); //new Vector3(10, 10, 10);
 
@@ -40540,9 +40573,13 @@ var Molecule = /*#__PURE__*/function (_Mesh3) {
       atomResult = collisionResults[minIndex];
       addCell = atomResult.atomA.cell.clone().add(atomResult.direction);
       newAtom = this.addAtom(addCell.y, addCell.x, addCell.z, atomResult.direction);
-      newAtom.alignment = newAtom.alignment.clone().multiply(atomResult.atomA.alignment); // molecule.destroy();
 
-      molecule.removeAtom(otherFirstAtom);
+      if (newAtom) {
+        newAtom.alignment = newAtom.alignment.clone().multiply(atomResult.atomA.alignment); // molecule.destroy();
+
+        molecule.removeAtom(otherFirstAtom);
+      }
+
       return true;
     }
   }, {
@@ -40571,6 +40608,8 @@ var Molecule = /*#__PURE__*/function (_Mesh3) {
 
       index = this.__atoms.indexOf(atom);
 
+      this.__cells.removeCellObject(atom.cell.y, atom.cell.x, atom.cell.z);
+
       this.__atomsGrid.remove(atom);
 
       this.__atoms.splice(index, 1);
@@ -40584,7 +40623,18 @@ var Molecule = /*#__PURE__*/function (_Mesh3) {
   }, {
     key: "addAtom",
     value: function addAtom(row, column, depth, alignDirection) {
-      var atom = new Atom(row, column, depth);
+      var atom;
+      /**
+       * The cell is not free. So cannot add.
+       */
+
+      if (this.__cells.getCellObject(row, column, depth)) {
+        return null;
+      }
+
+      atom = new Atom(row, column, depth);
+
+      this.__cells.addAtomToCell(atom, row, column, depth);
 
       this.__atomsGrid.add(atom);
 
@@ -41068,7 +41118,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "33857" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "40997" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
