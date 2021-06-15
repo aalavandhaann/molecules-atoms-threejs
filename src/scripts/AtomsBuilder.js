@@ -110,7 +110,7 @@ export class AtomsScene extends Scene {
 
     __addNewMoleculeWithOneAtom(x, y, z){
         let molecule = new Molecule();
-        molecule.addAtom();
+        molecule.addAtom(); 
         molecule.position.set(x, y, z);
         this.__molecules.push(molecule);
         this.__collidables.addCollidable(molecule);
@@ -118,10 +118,9 @@ export class AtomsScene extends Scene {
         molecule.addEventListener(EVENT_DESTROYED, this.__destroyMoleculeEvent);
     }
     __addMoleculeWithClick(evt){
-        console.log(evt.touches);
         if(evt.touches){
             if(evt.touches.length > 1){
-                this.__destroyMoleculeWithDoubleClick(evt.touches[0]);
+                this.__destroyMoleculeWithDoubleClick(evt.touches[1]);
                 return;
             }            
             evt = evt.touches[0];
