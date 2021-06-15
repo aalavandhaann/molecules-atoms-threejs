@@ -73,12 +73,12 @@ export class AtomsScene extends Scene {
 
         this.__collidables.addEventListener(EVENT_COLLISION, this.__stopRender.bind(this));
         window.addEventListener('click', this.__addMoleculeWithClick.bind(this));
+        window.addEventListener('touchstart', this.__addMoleculeWithClick.bind(this));
         window.addEventListener('contextmenu', this.__destroyMoleculeWithDoubleClick.bind(this));
         window.addEventListener('mousemove', this.__infoWindow.bind(this));
     }
 
     __infoWindow(evt){
-        console.log('show info');
         if(!this.__domInfoElement){
             return;
         }
@@ -118,6 +118,14 @@ export class AtomsScene extends Scene {
         molecule.addEventListener(EVENT_DESTROYED, this.__destroyMoleculeEvent);
     }
     __addMoleculeWithClick(evt){
+        console.log(evt.touches);
+        if(evt.touches){
+            if(evt.touches.length > 1){
+                this.__destroyMoleculeWithDoubleClick(evt.touches[0]);
+                return;
+            }            
+            evt = evt.touches[0];
+        }
         let p = null;
         let intersectResults = null;
         let size = this.__getSize();
